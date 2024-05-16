@@ -10,13 +10,15 @@
 #include <iostream>
 #include <vector>
 #include <bitset>
-#include <cstdlib> // For rand() function
-#include <ctime>   // For seeding srand()
+#include <cstdlib>
+#include <ctime>
 #include <algorithm>
 #include <queue>
 #include <set>
 #include <stack>
 #include <thread>
+#include "benchmarkOS_X.h"
+#include "benchmark.h"
 
 using namespace std;
 using namespace chrono;
@@ -65,7 +67,7 @@ int getIntInput(const string& prompt, int minValue, int maxValue) {
 
 // Define a structure to represent an edge
 struct Edge {
-    int src, dest; // Source and destination vertices of the edge
+    int src, dest;
     int weight; // Weight of the edge (not used in bit vector graph)
 
     Edge(int src, int dest, int weight) : src(src), dest(dest), weight(weight) {}
@@ -87,13 +89,12 @@ void unionSets(vector<int>& parent, int x, int y) {
 
 // Graph data structure based on a bit vector adjacency list
 struct BitVectorGraph {
-    bitset<MAX_VERTICES> adjList[MAX_VERTICES]; // Adjacency list using bit vectors
+    bitset<MAX_VERTICES> adjList[MAX_VERTICES];
     int V; // Number of vertices
 
-    // Constructor to initialize the graph with V vertices
     BitVectorGraph(int V) : V(V) {}
 
-// Function to add an edge between vertices u and v
+
     // Function to add an edge between vertices u and v
     void addEdge(int u, int v) {
         // Check if the vertices are valid
@@ -104,7 +105,7 @@ struct BitVectorGraph {
 
         // Add the edge between u and v
         adjList[u].set(v);
-        adjList[v].set(u); // For undirected graphs, set the bit for the reverse direction as well
+        adjList[v].set(u);
     }
 
 
@@ -135,28 +136,37 @@ struct BitVectorGraph {
     }
 
 
-    // Function to create a random graph with specified number of edges
-    void createRandomGraph(int E, double maxWeight) {
-        srand(time(NULL)); // Seed the random number generator
+// Function to create a random graph with specified number of edges
+    void createRandomGraph(int E, double maxWeight, bool directed) {
+        srand(time(NULL));
 
         int edgesAdded = 0;
         while (edgesAdded < E) {
-            int u = rand() % V; // Randomly select a source vertex
-            int v = rand() % V; // Randomly select a destination vertex
-            if (u != v && !adjList[u].test(v)) { // Ensure the edge does not already exist and is not a self-loop
-                double rawWeight = static_cast<double>(rand()) / (static_cast<double>(RAND_MAX / maxWeight));
-                double weight = round(rawWeight * 10) / 10.0; // Round to one decimal place
-                addEdge(u, v);
-                ++edgesAdded;
+            int u = rand() % V;
+            int v = rand() % V;
+            if (u != v) { // Ensure the edge is not a self-loop
+
+                // Check if the edge already exists
+                if (!directed && !adjList[u].test(v) && !adjList[v].test(u)) {
+                    // For undirected graph, add edge in both directions
+                    addEdge(u, v);
+                    addEdge(v, u);
+                    ++edgesAdded;
+                } else if (directed && !adjList[u].test(v)) {
+                    // For directed graph, add edge only if it doesn't already exist
+                    addEdge(u, v);
+                    ++edgesAdded;
+                }
             }
         }
     }
 
 
+
 // Depth-First Search (DFS) function to explore connected components
     void DFS(int v, vector<bool>& visited) {
-        visited[v] = true; // Mark the current vertex as visited
-        cout << v << " "; // Print the current vertex
+        visited[v] = true;
+        cout << v << " ";
 
         // Traverse all adjacent vertices of v
         for (int i = 0; i < V; ++i) {
@@ -174,21 +184,19 @@ struct BitVectorGraph {
         cout << "Connected Components:" << endl;
         for (int v = 0; v < V; ++v) {
             if (!visited[v]) {
-                DFS(v, visited); // Call DFS for each unvisited vertex
-                cout << endl; // Separate components by newline
+                DFS(v, visited);
+                cout << endl;
             }
         }
     }
 
     // Function to perform DFS traversal on the graph with neighbors traversed in order of increasing edge weights
     void dfsIncreasingEdgeWeights(int v, vector<bool>& visited) {
-        visited[v] = true; // Mark current vertex as visited
-        cout << v << " "; // Print the current vertex
+        visited[v] = true;
+        cout << v << " ";
 
-        // Create a set to store adjacent vertices in increasing order of edge weights
         set<int> adjVertices;
 
-        // Insert adjacent vertices of vertex v into the set in increasing order of edge weights
         for (int i = 0; i < V; ++i) {
             if (adjList[v].test(i) && !visited[i]) {
                 adjVertices.insert(i);
@@ -206,7 +214,7 @@ struct BitVectorGraph {
 
     // Dijkstra's algorithm to find the shortest distances from a source vertex to all other vertices
     void dijkstra(int source) {
-        vector<double> dist(V, INF); // Initialize distance array with infinity
+        vector<double> dist(V, INF);
         queue<int> Q;
 
         dist[source] = 0;
@@ -226,7 +234,6 @@ struct BitVectorGraph {
             }
         }
 
-        // Print the shortest distances from the source vertex to all other vertices
         cout << "Vertex \t Distance from Source\n";
         for (int i = 0; i < V; ++i) {
             cout << i << " \t ";
@@ -271,7 +278,8 @@ struct BitVectorGraph {
 
 // DFS traversal function for BitVectorGraph
 void dfsBit(const BitVectorGraph& graph, int v, vector<bool>& visited) {
-    visited[v] = true; // Mark current vertex as visited
+    visited[v] = true;
+
     // Traverse all adjacent vertices of vertex v
     for (int i = 0; i < graph.V; ++i) {
         if (graph.adjList[v].test(i) && !visited[i]) {
@@ -299,7 +307,7 @@ void dfsSpanningTreeBit(int u, const BitVectorGraph& graph, vector<bool>& visite
     visited[u] = true;
     for (int v = 0; v < graph.V; ++v) {
         if (graph.adjList[u].test(v) && !visited[v]) {
-            parent[v] = u; // Record the parent of vertex v
+            parent[v] = u;
             dfsSpanningTreeBit(v, graph, visited, parent);
         }
     }
@@ -309,8 +317,8 @@ void dfsSpanningTreeBit(int u, const BitVectorGraph& graph, vector<bool>& visite
 void buildSpanningTreeDFSBit(const BitVectorGraph& graph) {
     int V = graph.V;
     vector<bool> visited(V, false);
-    vector<int> parent(V, -1); // Initialize parent array to store the spanning tree edges
-    int totalWeight = 0; // Total weight of the spanning tree
+    vector<int> parent(V, -1);
+    int totalWeight = 0;
 
     for (int u = 0; u < V; ++u) {
         if (!visited[u]) {
@@ -322,12 +330,11 @@ void buildSpanningTreeDFSBit(const BitVectorGraph& graph) {
     for (int v = 0; v < V; ++v) {
         if (parent[v] != -1) {
             // Since the bit vector graph does not have weights, we cannot calculate the total weight
-            // We'll simply count the number of edges in the spanning tree
+            // we'll simply count the number of edges in the spanning tree
             totalWeight += 1;
         }
     }
 
-    // Output the total weight of the spanning tree
     cout << "Total number of edges in the spanning tree: " << totalWeight << endl;
 }
 
@@ -347,7 +354,7 @@ void kruskalBit(const BitVectorGraph& graph, bool benchmark = false) {
         }
     }
 
-    double totalWeight = 0; // Total weight of the minimum spanning tree
+    double totalWeight = 0;
 
     // Sort edges by their source and destination vertices
     sort(edges.begin(), edges.end(), [](const Edge& a, const Edge& b) {
@@ -373,12 +380,11 @@ void kruskalBit(const BitVectorGraph& graph, bool benchmark = false) {
 
 // Graph data structure based on adjacency matrix
 struct AdjMatrixGraph {
-    int V; // Number of vertices
-    vector<vector<int>> adjMatrix; // Adjacency matrix
+    int V;
+    vector<vector<int>> adjMatrix;
 
-    // Constructor to initialize the graph with V vertices
+
     AdjMatrixGraph(int V) : V(V) {
-        // Initialize the adjacency matrix with all zeros
         adjMatrix.resize(V, vector<int>(V, 0));
     }
 
@@ -392,7 +398,6 @@ struct AdjMatrixGraph {
 
         // Check if the edge already exists
         if (adjMatrix[u][v] != 0 || adjMatrix[v][u] != 0) {
-            cout << "Error: Edge already exists." << endl;
             return;
         }
 
@@ -404,7 +409,7 @@ struct AdjMatrixGraph {
 
         // Add the edge between u and v with weight
         adjMatrix[u][v] = weight;
-        adjMatrix[v][u] = weight; // For undirected graphs, add the edge in reverse direction too
+        adjMatrix[v][u] = weight;
     }
 
     // Function to check if the graph is directed
@@ -431,27 +436,37 @@ struct AdjMatrixGraph {
         }
     }
 
-    void createRandomGraph(int E, double maxWeight) {
+    // Function to create a random graph with specified number of edges
+    void createRandomGraph(int E, double maxWeight, bool directed) {
         srand(time(NULL));
 
         int edgesAdded = 0;
         while (edgesAdded < E) {
-            int u = rand() % V; // Randomly select a source vertex
-            int v = rand() % V; // Randomly select a destination vertex
-            if (u != v && !adjMatrix[u][v]) { // Ensure the edge does not already exist and is not a self-loop
-                double rawWeight = static_cast<double>(rand()) / (static_cast<double>(RAND_MAX / maxWeight));
-                double weight = round(rawWeight * 10) / 10.0; // Round to one decimal place
-                addEdge(u, v, weight);
-                ++edgesAdded;
+            int u = rand() % V;
+            int v = rand() % V;
+            if (u != v) { // Ensure the edge is not a self-loop
+
+                // Check if the edge already exists
+                if (!directed && adjMatrix[u][v] == 0 && adjMatrix[v][u] == 0) {
+                    // For undirected graph, add edge in both directions
+                    addEdge(u, v, maxWeight);
+                    addEdge(v, u, maxWeight);
+                    ++edgesAdded;
+                } else if (directed && adjMatrix[u][v] == 0) {
+                    // For directed graph, add edge only if it doesn't already exist
+                    addEdge(u, v, maxWeight);
+                    ++edgesAdded;
+                }
             }
         }
     }
 
 
+
     // Depth-First Search (DFS) function to explore connected components
     void DFS(int v, vector<bool>& visited) {
-        visited[v] = true; // Mark the current vertex as visited
-        cout << v << " "; // Print the current vertex
+        visited[v] = true;
+        cout << v << " ";
 
         // Traverse all adjacent vertices of v
         for (int i = 0; i < V; ++i) {
@@ -465,26 +480,22 @@ struct AdjMatrixGraph {
     // Function to find and print connected components
     void findConnectedComponents() {
         vector<bool> visited(V, false); // Initialize all vertices as not visited
-
+        cout << endl;
         cout << "Connected Components:" << endl;
         for (int v = 0; v < V; ++v) {
             if (!visited[v]) {
                 DFS(v, visited); // Call DFS for each unvisited vertex
-                cout << endl; // Separate components by newline
+                cout << endl;
             }
         }
     }
 
 
-
-
-
     // Function to perform DFS traversal on the graph with neighbors traversed in order of increasing edge weights
     void dfsIncreasingEdgeWeights(int v, vector<bool>& visited) {
-        visited[v] = true; // Mark current vertex as visited
-        cout << v << " "; // Print the current vertex
+        visited[v] = true;
+        cout << v << " ";
 
-        // Create a vector to store adjacent vertices in increasing order of edge weights
         vector<int> adjVertices;
 
         // Insert adjacent vertices of vertex v into the vector in increasing order of edge weights
@@ -528,7 +539,6 @@ struct AdjMatrixGraph {
             }
         }
 
-        // Print the shortest distances from the source vertex to all other vertices
         cout << "Vertex \t Distance from Source\n";
         for (int i = 0; i < V; ++i) {
             cout << i << " \t ";
@@ -541,31 +551,26 @@ struct AdjMatrixGraph {
     void topologicalSortUtil(int v, vector<bool>& visited, stack<int>& stack) {
         visited[v] = true;
 
-        // Recur for all adjacent vertices
         for (int i = 0; i < V; ++i) {
             if (adjMatrix[v][i] && !visited[i]) {
                 topologicalSortUtil(i, visited, stack);
             }
         }
 
-        // Push the current vertex to the stack
         stack.push(v);
     }
 
     // Function to perform topological sorting
     void topologicalSort() {
-        // Mark all the vertices as not visited
         vector<bool> visited(V, false);
         stack<int> stack;
 
-        // Call the utility function for each vertex
         for (int i = 0; i < V; ++i) {
             if (!visited[i]) {
                 topologicalSortUtil(i, visited, stack);
             }
         }
 
-        // Print the contents of the stack
         cout << "Topological Sort: ";
         while (!stack.empty()) {
             cout << stack.top() << " ";
@@ -578,7 +583,7 @@ struct AdjMatrixGraph {
 // DFS traversal function for AdjMatrixGraph
 void dfsAdj(const AdjMatrixGraph& graph, int v, vector<bool>& visited) {
     visited[v] = true; // Mark current vertex as visited
-    // Traverse all adjacent vertices of vertex v
+
     for (int i = 0; i < graph.V; ++i) {
         if (graph.adjMatrix[v][i] && !visited[i]) {
             dfsAdj(graph, i, visited); // Recursively visit unvisited adjacent vertices
@@ -588,8 +593,8 @@ void dfsAdj(const AdjMatrixGraph& graph, int v, vector<bool>& visited) {
 
 // Function to check if the graph is connected using Depth-First Search (DFS)
 bool isGraphConnectedAdj(const AdjMatrixGraph& graph) {
-    vector<bool> visited(graph.V, false); // Mark all vertices as not visited
-    dfsAdj(graph, 0, visited); // Start DFS traversal from vertex 0
+    vector<bool> visited(graph.V, false);
+    dfsAdj(graph, 0, visited);
 
     // Check if all vertices were visited during the DFS traversal
     for (bool v : visited) {
@@ -605,7 +610,7 @@ void dfsSpanningTreeAdj(int u, vector<vector<int>>& adjMatrix, vector<bool>& vis
     visited[u] = true;
     for (int v = 0; v < adjMatrix[u].size(); ++v) {
         if (adjMatrix[u][v] != 0 && !visited[v]) {
-            parent[v] = u; // Record the parent of vertex v
+            parent[v] = u;
             dfsSpanningTreeAdj(v, adjMatrix, visited, parent);
         }
     }
@@ -615,8 +620,8 @@ void dfsSpanningTreeAdj(int u, vector<vector<int>>& adjMatrix, vector<bool>& vis
 void buildSpanningTreeDFSAdj(AdjMatrixGraph& graph) {
     int V = graph.V;
     vector<bool> visited(V, false);
-    vector<int> parent(V, -1); // Initialize parent array to store the spanning tree edges
-    int totalWeight = 0; // Total weight of the spanning tree
+    vector<int> parent(V, -1);
+    int totalWeight = 0;
 
     for (int u = 0; u < V; ++u) {
         if (!visited[u]) {
@@ -631,7 +636,6 @@ void buildSpanningTreeDFSAdj(AdjMatrixGraph& graph) {
         }
     }
 
-    // Output the total weight of the spanning tree
     cout << "Total weight of the spanning tree: " << totalWeight << endl;
 }
 
@@ -644,7 +648,7 @@ void kruskalAdj(const AdjMatrixGraph& graph, bool benchmark = false) {
 
     vector<Edge> edges;
     for (int u = 0; u < V; ++u) {
-        for (int v = u + 1; v < V; ++v) { // Only traverse the upper triangular part of the matrix
+        for (int v = u + 1; v < V; ++v) {
             if (graph.adjMatrix[u][v] != 0) {
                 edges.emplace_back(u, v, graph.adjMatrix[u][v]);
             }
@@ -697,106 +701,8 @@ int main() {
             benchmarkMode();
     }
 
-
-
-
-//    int V = 5; // Number of vertices in the graph
-//    int E = 7; // Number of edges in the graph (for random graph creation)
-//
-//
-//    BitVectorGraph bitVectorGraph(V);
-//    bitVectorGraph.createRandomGraph(7, 10);
-//    bitVectorGraph.printGraph();
-//
-//// Check if the bit vector graph is directed
-//    cout << "Bit Vector Graph: ";
-//    if (bitVectorGraph.isDirectedBitVector()) {
-//        // Do something if the graph is directed
-//    } else {
-//        // Do something if the graph is undirected
-//    }
-//
-//
-//    // Check if the BitVectorGraph is connected
-//    cout << "BitVectorGraph is " << (isGraphConnectedBit(bitVectorGraph) ? "connected" : "disconnected") << endl;
-//
-//    vector<bool> visitedBit(bitVectorGraph.V, false);
-//    cout << "DFS Arbitrary Order (Bit Vector Graph): ";
-//    bitVectorGraph.dfsArbitraryOrder(0, visitedBit);
-//    cout << endl;
-//
-//    fill(visitedBit.begin(), visitedBit.end(), false); // Reset visited array
-//    cout << "DFS Increasing Edge Weights (Bit Vector Graph): ";
-//    bitVectorGraph.dfsIncreasingEdgeWeights(0, visitedBit);
-//    cout << endl;
-//
-//    // Find the shortest paths from vertex 0
-//    cout << "Shortest paths using BitVectorGraph:" << endl;
-//    bitVectorGraph.dijkstra(0);
-//    cout << endl;
-//
-//
-//    cout << "Topological Sorting:" << endl;
-//    bitVectorGraph.topologicalSort();
-//
-//    // Build and display the spanning tree using DFS
-//    buildSpanningTreeDFSBit(bitVectorGraph);
-//
-//
-//
-//
-//    // Create and manipulate the adjacency matrix graph
-//    AdjMatrixGraph adjMatrixGraph(V);
-//    adjMatrixGraph.createRandomGraph(7, 10);
-//    adjMatrixGraph.printGraph();
-//
-//    // Check if the adjacency matrix graph is directed
-//    cout << "Adjacency Matrix Graph: ";
-//    if (adjMatrixGraph.isDirectedAdjMatrix()) {
-//        // Do something if the graph is directed
-//    } else {
-//        // Do something if the graph is undirected
-//    }
-//
-//    // Check if the AdjMatrixGraph is connected
-//    cout << "AdjMatrixGraph is " << (isGraphConnectedAdj(adjMatrixGraph) ? "connected" : "disconnected") << endl;
-//
-//    vector<bool> visitedMatrix(adjMatrixGraph.V, false);
-//    cout << "DFS Arbitrary Order (Adjacency Matrix Graph): ";
-//    adjMatrixGraph.dfsArbitraryOrder(0, visitedMatrix);
-//    cout << endl;
-//
-//    fill(visitedMatrix.begin(), visitedMatrix.end(), false); // Reset visited array
-//    cout << "DFS Increasing Edge Weights (Adjacency Matrix Graph): ";
-//    adjMatrixGraph.dfsIncreasingEdgeWeights(0, visitedMatrix);
-//    cout << endl;
-//
-//    // Find the shortest paths from vertex 0
-//    cout << "Shortest paths using AdjMatrixGraph:" << endl;
-//    adjMatrixGraph.dijkstra(0);
-//
-//
-//    cout << "Topological Sorting:" << endl;
-//    adjMatrixGraph.topologicalSort();
-//
-//    // Build and display the spanning tree using DFS
-//    buildSpanningTreeDFSAdj(adjMatrixGraph);
-//
-//    // Apply Kruskal's algorithm to find the minimum spanning tree
-//    kruskalAdj(adjMatrixGraph);
-
     return 0;
 }
-
-//void printMenuUserManagement() {
-//    cout << "\n====== Graph Operations Menu ======" << endl;
-//    cout << "1. Create a graph" << endl;
-//    cout << "2. Add an edge" << endl;
-//    cout << "3. Perform algorithm" << endl;
-//    cout << "4. Print graph details" << endl;
-//    cout << "5. Exit" << endl;
-//    cout << "Enter your choice: ";
-//}
 
 const string menu = "Select mode:\n"
                     "1. Create a graph\n"
@@ -818,9 +724,9 @@ void userManagementMode() {
 
     int optionForGraphs = 0;
     optionForGraphs = getIntInput("Select graph you want to interact with:"
-                        "1. Bit Vector Graph"
-                       "2. Adjacency Matrix Graph"
-                       "0. Exit", 0, 2);
+                                  "1. Bit Vector Graph"
+                                  "2. Adjacency Matrix Graph"
+                                  "0. Exit", 0, 2);
     switch (optionForGraphs) {
         case 0: {
             cout << "Thanks for using system" << endl;
@@ -857,7 +763,7 @@ void userManagementModeBitGraph() {
                 bitVectorGraph = BitVectorGraph(graphV);
                 int graphE = getIntInput("Enter number of edges in the graph", 0, 1000);
                 int graphMaxWeight = getIntInput("Enter max weight of the graph", 0, 1000);
-                bitVectorGraph.createRandomGraph(graphE, graphMaxWeight);
+                bitVectorGraph.createRandomGraph(graphE, graphMaxWeight, false);
                 break;
             }
             case 3: {
@@ -944,7 +850,7 @@ void userManagementModeAdjGraph() {
                 adjVectorGraph = AdjMatrixGraph(graphV);
                 int graphE = getIntInput("Enter number of edges in the graph", 0, 1000);
                 int graphMaxWeight = getIntInput("Enter max weight of the graph", 0, 1000);
-                adjVectorGraph.createRandomGraph(graphE, graphMaxWeight);
+                adjVectorGraph.createRandomGraph(graphE, graphMaxWeight, false);
                 break;
             }
             case 3: {
@@ -1030,13 +936,12 @@ void demonstrationMode() {
     cout << "Number of edges (E): " << E << endl;
     double weight = rand() % 100 / 10.0; // Generate a random
     BitVectorGraph bitVectorGraph(V);
-    bitVectorGraph.createRandomGraph(E, weight);
+    bitVectorGraph.createRandomGraph(E, weight, false);
 
 
 
     int u = rand() % MAX_VERTICES; // Generate a random vertex index
     int v = rand() % MAX_VERTICES; //  Generate a random vertex index
-//    weight = rand() % 100 / 10.0;
     cout << "\n\n@@@@@  Adding an edge with random source vertex, destination vertex and the weight of the edge(BitVectorGraph).  @@@@@\n\n" << endl;
     loadingAnimation();
     loadingAnimation();
@@ -1119,7 +1024,7 @@ void demonstrationMode() {
     cout << "Number of vertices (V): " << V << endl;
     cout << "Number of edges (E): " << E << endl;
     AdjMatrixGraph adjMatrixGraph(V);
-    adjMatrixGraph.createRandomGraph(E, weight);
+    adjMatrixGraph.createRandomGraph(E, weight, false);
 
 
     cout << "\n\n@@@@@  Adding an edge with random source vertex, destination vertex and the weight of the edge(AdjMatrixGraph).  @@@@@\n\n" << endl;
@@ -1192,12 +1097,376 @@ void demonstrationMode() {
     loadingAnimation();
     loadingAnimation();
     kruskalAdj(adjMatrixGraph);
-
-    cout << "\n\n\n\n\n@@@@@ SUMMARY: @@@@@\n\n\n" << endl;
 }
 
 
 void benchmarkMode() {
+    cout << "\nYou are now in the benchmark mode, time of each operation will be written afterwards\n";
+
+    cout << "Bit Vector Graph, directed" << endl;
+    int V = rand() % MAX_VERTICES;
+    int E = rand() % (V * (V - 1) / 2 + 1);
+
+    double weight = rand() % 100 / 10.0;
+    auto startTimeBitDirected = high_resolution_clock::now();
+    BitVectorGraph bitVectorGraphDirected(V);
+    auto startTimeBitDirectedCreating = high_resolution_clock::now();
+     BenchmarkMax memoryBenchmarkDirBit("Creating a random graph(Directed Bit Graph)");
+    bitVectorGraphDirected.createRandomGraph(E, weight, true);
+    auto endTimeBitDirectedCreating = high_resolution_clock::now();
 
 
+    auto startTimeBitDirectedPrinting = high_resolution_clock::now();
+     BenchmarkMax printBenchmarkDirBit("Printing graph(Directed Bit Graph)");
+    bitVectorGraphDirected.printGraph();
+    auto endTimeBitDirectedPrinting = high_resolution_clock::now();
+
+    auto startTimeBitDirectedIsConnected = high_resolution_clock::now();
+     BenchmarkMax connectionBenchmarkDirBit("Checking whether graph connected or not(Directed Bit Graph)");
+    isGraphConnectedBit(bitVectorGraphDirected);
+    auto endTimeBitDirectedIsConnected = high_resolution_clock::now();
+
+
+    auto startTimeBitDirectedIncreasingEdgeWeights = high_resolution_clock::now();
+     BenchmarkMax dfsIncreasingEdgeWeightsBenchmarkDirBit("Applying DFS Algorithms for the graph - IncreasingEdgeWeights(Directed Bit Graph)");
+    vector<bool> visitedBitDirected(bitVectorGraphDirected.V, false);
+    bitVectorGraphDirected.dfsIncreasingEdgeWeights(0, visitedBitDirected);
+    auto endTimeBitDirectedIncreasingEdgeWeights = high_resolution_clock::now();
+
+
+    auto startTimeBitDirectedFindingConnectedComponents = high_resolution_clock::now();
+     BenchmarkMax findConnectedComponentsBenchmarkDirBit("Applying DFS Algorithms for the graph - findConnectedComponents(Directed Bit Graph)");
+    bitVectorGraphDirected.findConnectedComponents();
+    auto endTimeBitDirectedFindingConnectedComponents = high_resolution_clock::now();
+
+
+
+    auto startTimeBitDirectedDijkstra = high_resolution_clock::now();
+     BenchmarkMax dijkstraBenchmarkDirBit(" Applying Dijkstra Algorithms for the graph(Directed Bit Graph)");
+    bitVectorGraphDirected.dijkstra(0);
+    auto endTimeBitDirectedDijkstra = high_resolution_clock::now();
+
+
+    auto startTimeBitDirectedTopologicalSort = high_resolution_clock::now();
+     BenchmarkMax topologicalSortBenchmarkDirBit("Applying topological sorting for the graph(Directed Bit Graph)");
+    bitVectorGraphDirected.topologicalSort();
+    auto endTimeBitDirectedTopologicalSort= high_resolution_clock::now();
+
+
+    auto startTimeBitDirectedBuildSpanningTreeDFSBit = high_resolution_clock::now();
+     BenchmarkMax buildSpanningTreeDFSBitBenchmarkDirBit("Building Spanning Tree for the graph(Directed Bit Graph)");
+    buildSpanningTreeDFSBit(bitVectorGraphDirected);
+    auto endTimeBitDirectedBuildSpanningTreeDFSBit = high_resolution_clock::now();
+
+
+    auto startTimeBitDirectedKruskalBit = high_resolution_clock::now();
+     BenchmarkMax kruskalBitBenchmarkDirBit("Finding the minimum spanning tree(Kruskal Algorithm) for the graph(Directed Bit Graph).");
+    kruskalBit(bitVectorGraphDirected);
+    auto endTimeBitDirectedKruskalBit = high_resolution_clock::now();
+
+    auto endTimeBitDirected = high_resolution_clock::now();
+
+
+
+
+
+    cout << "Bit Vector Graph, Undirected" << endl;
+    auto startTimeBitUndirected = high_resolution_clock::now();
+
+    BitVectorGraph bitVectorGraphUndirected(V);
+    auto startTimeBitUndirectedCreating = high_resolution_clock::now();
+     BenchmarkMax memoryBenchmarkUndirectedBit("Creating a random graph(Undirected Bit Graph).");
+    bitVectorGraphUndirected.createRandomGraph(E, weight, false);
+    auto endTimeBitUndirectedCreating = high_resolution_clock::now();
+
+
+    auto startTimeBitUndirectedPrinting = high_resolution_clock::now();
+     BenchmarkMax printBenchmarkUndirectedBit("Printing graph(Undirected Bit Graph).");
+    bitVectorGraphUndirected.printGraph();
+    auto endTimeBitUndirectedPrinting = high_resolution_clock::now();
+
+    auto startTimeBitUndirectedIsConnected = high_resolution_clock::now();
+     BenchmarkMax connectionBenchmarkUndirectedBit("Checking whether graph connected or not(Undirected Bit Graph).");
+    isGraphConnectedBit(bitVectorGraphUndirected);
+    auto endTimeBitUndirectedIsConnected = high_resolution_clock::now();
+
+
+    auto startTimeBitUndirectedIncreasingEdgeWeights = high_resolution_clock::now();
+     BenchmarkMax dfsIncreasingEdgeWeightsBenchmarkUndirectedBit("Applying DFS Algorithms for the graph - IncreasingEdgeWeights(Undirected Bit Graph).");
+    vector<bool> visitedBit(bitVectorGraphUndirected.V, false);
+    bitVectorGraphUndirected.dfsIncreasingEdgeWeights(0, visitedBit);
+    auto endTimeBitUndirectedIncreasingEdgeWeights = high_resolution_clock::now();
+
+
+    auto startTimeBitUndirectedFindingConnectedComponents = high_resolution_clock::now();
+     BenchmarkMax findConnectedComponentsBenchmarkUndirectedBit("Applying DFS Algorithms for the graph - findConnectedComponents(Undirected Bit Graph).");
+    bitVectorGraphUndirected.findConnectedComponents();
+    auto endTimeBitUndirectedFindingConnectedComponents = high_resolution_clock::now();
+
+
+
+    auto startTimeBitUndirectedDijkstra = high_resolution_clock::now();
+     BenchmarkMax dijkstraBenchmarkUndirectedBit(" Applying Dijkstra Algorithms for the graph(Undirected Bit Graph).");
+    bitVectorGraphUndirected.dijkstra(0);
+    auto endTimeBitUndirectedDijkstra = high_resolution_clock::now();
+
+
+    auto startTimeBitUndirectedTopologicalSort = high_resolution_clock::now();
+     BenchmarkMax topologicalSortBenchmarkUndirectedBit("Applying topological sorting for the graph(Undirected Bit Graph).");
+    bitVectorGraphUndirected.topologicalSort();
+    auto endTimeBitUndirectedTopologicalSort= high_resolution_clock::now();
+
+
+    auto startTimeBitUndirectedBuildSpanningTreeDFSBit = high_resolution_clock::now();
+     BenchmarkMax buildSpanningTreeDFSBitBenchmarkUndirectedBit("Building Spanning Tree for the graph(Undirected Bit Graph)");
+    buildSpanningTreeDFSBit(bitVectorGraphUndirected);
+    auto endTimeBitUndirectedBuildSpanningTreeDFSBit = high_resolution_clock::now();
+
+
+    auto startTimeBitUndirectedKruskalBit = high_resolution_clock::now();
+     BenchmarkMax kruskalBitBenchmarkUndirectedBit("Finding the minimum spanning tree(Kruskal Algorithm) for the graph(Undirected Bit Graph).");
+    kruskalBit(bitVectorGraphUndirected);
+    auto endTimeBitUndirectedKruskalBit = high_resolution_clock::now();
+
+
+    auto endTimeBitUndirected = high_resolution_clock::now();
+
+
+
+
+    cout << "Adjusted Matrix Graph, directed" << endl;
+
+
+    auto startTimeAdjDirected = high_resolution_clock::now();
+    AdjMatrixGraph adjMatrixGraphDirected(V);
+    auto startTimeAdjDirectedCreating = high_resolution_clock::now();
+     BenchmarkMax memoryBenchmarkDirAdj("Creating a random graph(Directed Adj Graph)");
+    adjMatrixGraphDirected.createRandomGraph(E, weight, true);
+    auto endTimeAdjDirectedCreating = high_resolution_clock::now();
+
+
+    auto startTimeAdjDirectedPrinting = high_resolution_clock::now();
+     BenchmarkMax printBenchmarkDirAdj("Printing graph(Directed Adj Graph)");
+    adjMatrixGraphDirected.printGraph();
+    auto endTimeAdjDirectedPrinting = high_resolution_clock::now();
+
+    auto startTimeAdjDirectedIsConnected = high_resolution_clock::now();
+     BenchmarkMax connectionBenchmarkDirAdj("Checking whether graph connected or not(Directed Adj Graph)");
+    isGraphConnectedAdj(adjMatrixGraphDirected);
+    auto endTimeAdjDirectedIsConnected = high_resolution_clock::now();
+
+
+    auto startTimeAdjDirectedIncreasingEdgeWeights = high_resolution_clock::now();
+     BenchmarkMax dfsIncreasingEdgeWeightsBenchmarkDirAdj("Applying DFS Algorithms for the graph - IncreasingEdgeWeights(Directed Adj Graph)");
+    vector<bool> visitedAdjDirected(adjMatrixGraphDirected.V, false);
+    adjMatrixGraphDirected.dfsIncreasingEdgeWeights(0, visitedAdjDirected);
+    auto endTimeAdjDirectedIncreasingEdgeWeights = high_resolution_clock::now();
+
+
+    auto startTimeAdjDirectedFindingConnectedComponents = high_resolution_clock::now();
+     BenchmarkMax findConnectedComponentsBenchmarkDirAdj("Applying DFS Algorithms for the graph - findConnectedComponents(Directed Adj Graph)");
+    adjMatrixGraphDirected.findConnectedComponents();
+    auto endTimeAdjDirectedFindingConnectedComponents = high_resolution_clock::now();
+
+
+
+    auto startTimeAdjDirectedDijkstra = high_resolution_clock::now();
+     BenchmarkMax dijkstraBenchmarkDirAdj("Applying Dijkstra Algorithms for the graph(Directed Adj Graph)");
+    adjMatrixGraphDirected.dijkstra(0);
+    auto endTimeAdjDirectedDijkstra = high_resolution_clock::now();
+
+
+    auto startTimeAdjDirectedTopologicalSort = high_resolution_clock::now();
+     BenchmarkMax topologicalSortBenchmarkDirAdj("Applying topological sorting for the graph(Directed Adj Graph)");
+    adjMatrixGraphDirected.topologicalSort();
+    auto endTimeAdjDirectedTopologicalSort= high_resolution_clock::now();
+
+
+    auto startTimeAdjDirectedBuildSpanningTreeDFS = high_resolution_clock::now();
+     BenchmarkMax buildSpanningTreeDFSBenchmarkDirAdj("Building Spanning Tree for the graph(Directed Adj Graph)");
+    buildSpanningTreeDFSAdj(adjMatrixGraphDirected);
+    auto endTimeAdjDirectedBuildSpanningTreeDFS = high_resolution_clock::now();
+
+
+    auto startTimeAdjDirectedKruskal = high_resolution_clock::now();
+     BenchmarkMax kruskalBitBenchmarkDirAdj("Finding the minimum spanning tree(Kruskal Algorithm) for the graph(Directed Adj Graph).");
+    kruskalAdj(adjMatrixGraphDirected);
+    auto endTimeAdjDirectedKruskal = high_resolution_clock::now();
+
+    auto endTimeAdjDirected = high_resolution_clock::now();
+
+
+
+
+    cout << "Adjusted Matrix Graph, undirected" << endl;
+
+
+    auto startTimeAdjUndirected = high_resolution_clock::now();
+    AdjMatrixGraph adjMatrixGraphUndirected(V);
+    auto startTimeAdjUndirectedCreating = high_resolution_clock::now();
+     BenchmarkMax memoryBenchmarkUndirectedAdj("Creating a random graph(Undirected Adj Graph)");
+    adjMatrixGraphUndirected.createRandomGraph(E, weight, false);
+    auto endTimeAdjUndirectedCreating = high_resolution_clock::now();
+
+
+    auto startTimeAdjUndirectedPrinting = high_resolution_clock::now();
+     BenchmarkMax printBenchmarkUndirectedAdj("Printing graph(Undirected Adj Graph)");
+    adjMatrixGraphUndirected.printGraph();
+    auto endTimeAdjUndirectedPrinting = high_resolution_clock::now();
+
+    auto startTimeAdjUndirectedIsConnected = high_resolution_clock::now();
+     BenchmarkMax connectionBenchmarkUndirectedAdj("Checking whether graph connected or not(Undirected Adj Graph)");
+    isGraphConnectedAdj(adjMatrixGraphUndirected);
+    auto endTimeAdjUndirectedIsConnected = high_resolution_clock::now();
+
+
+    auto startTimeAdjUndirectedIncreasingEdgeWeights = high_resolution_clock::now();
+     BenchmarkMax dfsIncreasingEdgeWeightsBenchmarkUndirectedAdj("Applying DFS Algorithms for the graph - IncreasingEdgeWeights(Undirected Adj Graph)");
+    vector<bool> visitedAdjUndirected(adjMatrixGraphUndirected.V, false);
+    adjMatrixGraphUndirected.dfsIncreasingEdgeWeights(0, visitedAdjUndirected);
+    auto endTimeAdjUndirectedIncreasingEdgeWeights = high_resolution_clock::now();
+
+
+    auto startTimeAdjUndirectedFindingConnectedComponents = high_resolution_clock::now();
+     BenchmarkMax findConnectedComponentsBenchmarkUndirectedAdj("Applying DFS Algorithms for the graph - findConnectedComponents(Undirected Adj Graph)");
+    adjMatrixGraphUndirected.findConnectedComponents();
+    auto endTimeAdjUndirectedFindingConnectedComponents = high_resolution_clock::now();
+
+
+
+    auto startTimeAdjUndirectedDijkstra = high_resolution_clock::now();
+     BenchmarkMax dijkstraBenchmarkUndirectedAdj("Applying Dijkstra Algorithms for the graph(Undirected Adj Graph)");
+    adjMatrixGraphUndirected.dijkstra(0);
+    auto endTimeAdjUndirectedDijkstra = high_resolution_clock::now();
+
+
+
+    auto startTimeAdjUndirectedTopologicalSort = high_resolution_clock::now();
+     BenchmarkMax topologicalSortBenchmarkUndirectedAdj("Applying topological sorting for the graph(Undirected Adj Graph)");
+    adjMatrixGraphUndirected.topologicalSort();
+    auto endTimeAdjUndirectedTopologicalSort= high_resolution_clock::now();
+
+
+    auto startTimeAdjUndirectedBuildSpanningTreeDFS = high_resolution_clock::now();
+     BenchmarkMax buildSpanningTreeDFSBenchmarkUndirectedAdj("Building Spanning Tree for the graph(Undirected Adj Graph)");
+    buildSpanningTreeDFSAdj(adjMatrixGraphUndirected);
+    auto endTimeAdjUndirectedBuildSpanningTreeDFS = high_resolution_clock::now();
+
+
+    auto startTimeAdjUndirectedKruskal = high_resolution_clock::now();
+     BenchmarkMax kruskalAdjBenchmarkUndirectedAdj("Finding the minimum spanning tree(Kruskal Algorithm) for the graph(Undirected Adj Graph).");
+    kruskalAdj(adjMatrixGraphUndirected);
+    auto endTimeAdjUndirectedKruskal = high_resolution_clock::now();
+
+    auto endTimeAdjUndirected = high_resolution_clock::now();
+
+
+
+
+    auto durationBitDirected = duration_cast<duration<double, milli>>(endTimeBitDirected - startTimeBitDirected).count();
+    auto durationBitDirectedCreating = duration_cast<duration<double, nano>>(endTimeBitDirectedCreating - startTimeBitDirectedCreating).count();
+    auto durationBitDirectedPrinting = duration_cast<duration<double, nano>>(endTimeBitDirectedPrinting - startTimeBitDirectedPrinting).count();
+    auto durationBitDirectedConnection = duration_cast<duration<double, nano>>(endTimeBitDirectedIsConnected - startTimeBitDirectedIsConnected).count();
+    auto durationBitDirectedDfsIncreasingEdgeWeights = duration_cast<duration<double, nano>>(endTimeBitDirectedBuildSpanningTreeDFSBit - startTimeBitDirectedBuildSpanningTreeDFSBit).count();
+    auto durationBitDirectedFindConnectedComponents = duration_cast<duration<double, nano>>(endTimeBitDirectedFindingConnectedComponents - startTimeBitDirectedFindingConnectedComponents).count();
+    auto durationBitDirectedDijkstra = duration_cast<duration<double, nano>>(endTimeBitDirectedDijkstra - startTimeBitDirectedDijkstra).count();
+    auto durationBitDirectedTopologicalSort = duration_cast<duration<double, nano>>(endTimeBitDirectedTopologicalSort - startTimeBitDirectedTopologicalSort).count();
+    auto durationBitDirectedBuildSpanningTreeDFS = duration_cast<duration<double, nano>>(endTimeBitDirectedBuildSpanningTreeDFSBit - startTimeBitDirectedBuildSpanningTreeDFSBit).count();
+    auto durationBitDirectedKruskal = duration_cast<duration<double, nano>>(endTimeBitDirectedKruskalBit - startTimeBitDirectedKruskalBit).count();
+
+
+
+    auto durationBitUndirected = duration_cast<duration<double, milli>>(endTimeBitUndirected - startTimeBitUndirected).count();
+    auto durationBitUndirectedCreating = duration_cast<duration<double, nano>>(endTimeBitUndirectedCreating - startTimeBitUndirectedCreating).count();
+    auto durationBitUndirectedPrinting = duration_cast<duration<double, nano>>(endTimeBitUndirectedPrinting - startTimeBitUndirectedPrinting).count();
+    auto durationBitUndirectedConnection = duration_cast<duration<double, nano>>(endTimeBitUndirectedIsConnected - startTimeBitUndirectedIsConnected).count();
+    auto durationBitUndirectedDfsIncreasingEdgeWeights = duration_cast<duration<double, nano>>(endTimeBitUndirectedBuildSpanningTreeDFSBit - startTimeBitUndirectedBuildSpanningTreeDFSBit).count();
+    auto durationBitUndirectedFindConnectedComponents = duration_cast<duration<double, nano>>(endTimeBitUndirectedFindingConnectedComponents - startTimeBitUndirectedFindingConnectedComponents).count();
+    auto durationBitUndirectedDijkstra = duration_cast<duration<double, nano>>(endTimeBitUndirectedDijkstra - startTimeBitUndirectedDijkstra).count();
+    auto durationBitUndirectedTopologicalSort = duration_cast<duration<double, nano>>(endTimeBitUndirectedTopologicalSort - startTimeBitUndirectedTopologicalSort).count();
+    auto durationBitUndirectedBuildSpanningTreeDFS = duration_cast<duration<double, nano>>(endTimeBitUndirectedBuildSpanningTreeDFSBit - startTimeBitUndirectedBuildSpanningTreeDFSBit).count();
+    auto durationBitUndirectedKruskal = duration_cast<duration<double, nano>>(endTimeBitUndirectedKruskalBit - startTimeBitUndirectedKruskalBit).count();
+
+
+
+    auto durationAdjDirected = duration_cast<duration<double, milli>>(endTimeAdjDirected - startTimeAdjDirected).count();
+    auto durationAdjDirectedCreating = duration_cast<duration<double, nano>>(endTimeAdjDirectedCreating - startTimeAdjDirectedCreating).count();
+    auto durationAdjDirectedPrinting = duration_cast<duration<double, nano>>(endTimeAdjDirectedPrinting - startTimeAdjDirectedPrinting).count();
+    auto durationAdjDirectedConnection = duration_cast<duration<double, nano>>(endTimeAdjDirectedIsConnected - startTimeAdjDirectedIsConnected).count();
+    auto durationAdjDirectedDfsIncreasingEdgeWeights = duration_cast<duration<double, nano>>(endTimeAdjDirectedBuildSpanningTreeDFS - startTimeAdjDirectedBuildSpanningTreeDFS).count();
+    auto durationAdjDirectedFindConnectedComponents = duration_cast<duration<double, nano>>(endTimeAdjDirectedFindingConnectedComponents - startTimeAdjDirectedFindingConnectedComponents).count();
+    auto durationAdjDirectedDijkstra = duration_cast<duration<double, nano>>(endTimeAdjDirectedDijkstra - startTimeAdjDirectedDijkstra).count();
+    auto durationAdjDirectedTopologicalSort = duration_cast<duration<double, nano>>(endTimeAdjDirectedTopologicalSort - startTimeAdjDirectedTopologicalSort).count();
+    auto durationAdjDirectedBuildSpanningTreeDFS = duration_cast<duration<double, nano>>(endTimeAdjDirectedBuildSpanningTreeDFS - startTimeAdjDirectedBuildSpanningTreeDFS).count();
+    auto durationAdjDirectedKruskal = duration_cast<duration<double, nano>>(endTimeAdjDirectedKruskal - startTimeAdjDirectedKruskal).count();
+
+
+
+    auto durationAdjUndirected = duration_cast<duration<double, milli>>(endTimeAdjUndirected - startTimeAdjUndirected).count();
+    auto durationAdjUndirectedCreating = duration_cast<duration<double, nano>>(endTimeAdjUndirectedCreating - startTimeBitUndirectedCreating).count();
+    auto durationAdjUndirectedPrinting = duration_cast<duration<double, nano>>(endTimeAdjUndirectedPrinting - startTimeBitUndirectedPrinting).count();
+    auto durationAdjUndirectedConnection = duration_cast<duration<double, nano>>(endTimeAdjUndirectedIsConnected - startTimeBitUndirectedIsConnected).count();
+    auto durationAdjUndirectedDfsIncreasingEdgeWeights = duration_cast<duration<double, nano>>(endTimeAdjUndirectedBuildSpanningTreeDFS - startTimeAdjUndirectedBuildSpanningTreeDFS).count();
+    auto durationAdjUndirectedFindConnectedComponents = duration_cast<duration<double, nano>>(endTimeAdjUndirectedFindingConnectedComponents - startTimeAdjUndirectedFindingConnectedComponents).count();
+    auto durationAdjUndirectedDijkstra = duration_cast<duration<double, nano>>(endTimeAdjUndirectedDijkstra - startTimeAdjUndirectedDijkstra).count();
+    auto durationAdjUndirectedTopologicalSort = duration_cast<duration<double, nano>>(endTimeAdjUndirectedTopologicalSort - startTimeAdjUndirectedTopologicalSort).count();
+    auto durationAdjUndirectedBuildSpanningTreeDFS = duration_cast<duration<double, nano>>(endTimeAdjUndirectedBuildSpanningTreeDFS - startTimeAdjUndirectedBuildSpanningTreeDFS).count();
+    auto durationAdjUndirectedKruskal = duration_cast<duration<double, nano>>(endTimeAdjUndirectedKruskal - startTimeAdjUndirectedKruskal).count();
+
+
+    cout << "\n\n\n\n---------------------------------------------------" << endl;
+    cout << "\nTime All Bit Graph Directed: " << durationBitDirected << " milliseconds\n" <<
+         "\nTime Creating Bit Graph Directed: " << durationBitDirectedCreating << " nanoseconds\n" <<
+         "\nTime Printing Bit Graph Directed: " << durationBitDirectedPrinting << " nanoseconds\n" <<
+         "\nTime Bit Directed Connection Directed:" << durationBitDirectedConnection << " nanoseconds\n" <<
+         "\nTime Dfs Increasing Edge Weights Bit Graph Directed: " << durationBitDirectedDfsIncreasingEdgeWeights << " nanoseconds\n" <<
+         "\nTime Find Connected Components Bit Graph Directed: " << durationBitDirectedFindConnectedComponents << " nanoseconds\n" <<
+         "\nTime Dijkstra Bit Graph Directed: " << durationBitDirectedDijkstra << " nanoseconds\n" <<
+         "\nTime Topological Sort Bit Graph Directed: " << durationBitDirectedTopologicalSort << " nanoseconds\n" <<
+         "\nTime Build Spanning Tree DFS Bit Graph Directed: " << durationBitDirectedBuildSpanningTreeDFS << " nanoseconds\n" <<
+         "\nTime Kruskal Bit Graph Directed: " << durationBitDirectedKruskal << " nanoseconds\n";
+
+
+    cout << "\n\n\n\n---------------------------------------------------" << endl;
+    cout << "\nTime All Bit Graph Undirected: " << durationBitUndirected << " milliseconds\n" <<
+         "\nTime Creating Bit Graph Undirected: " << durationBitUndirectedCreating << " nanoseconds\n" <<
+         "\nTime Printing Bit Graph Undirected: " << durationBitUndirectedPrinting << " nanoseconds\n" <<
+         "\nTime Bit Directed Connection Undirected:" << durationBitUndirectedConnection << " nanoseconds\n" <<
+         "\nTime Dfs Increasing Edge Weights Bit Graph Undirected: " << durationBitUndirectedDfsIncreasingEdgeWeights << " nanoseconds\n" <<
+         "\nTime Find Connected Components Bit Graph Undirected: " << durationBitUndirectedFindConnectedComponents << " nanoseconds\n" <<
+         "\nTime Dijkstra Bit Graph Undirected: " << durationBitUndirectedDijkstra << " nanoseconds\n" <<
+         "\nTime Topological Sort Bit Graph Undirected: " << durationBitUndirectedTopologicalSort << " nanoseconds\n" <<
+         "\nTime Build Spanning Tree DFS Bit Graph Undirected: " << durationBitUndirectedBuildSpanningTreeDFS << " nanoseconds\n" <<
+         "\nTime Kruskal Bit Graph Undirected: " << durationBitUndirectedKruskal << " nanoseconds\n";
+
+
+
+    cout << "\n\n\n\n---------------------------------------------------" << endl;
+    cout << "\nTime All Adj Graph Directed: " << durationAdjDirected << " milliseconds\n" <<
+         "\nTime Creating Adj Graph Directed: " << durationAdjDirectedCreating << " nanoseconds\n" <<
+         "\nTime Printing Adj Graph Directed: " << durationAdjDirectedPrinting << " nanoseconds\n" <<
+         "\nTime Adj Directed Connection Directed:" << durationAdjDirectedConnection << " nanoseconds\n" <<
+         "\nTime Dfs Increasing Edge Weights Adj Graph Directed: " << durationAdjDirectedDfsIncreasingEdgeWeights << " nanoseconds\n" <<
+         "\nTime Find Connected Components Adj Graph Directed: " << durationAdjDirectedFindConnectedComponents << " nanoseconds\n" <<
+         "\nTime Dijkstra Adj Graph Directed: " << durationAdjDirectedDijkstra << " nanoseconds\n" <<
+         "\nTime Topological Sort Adj Graph Directed: " << durationAdjDirectedTopologicalSort << " nanoseconds\n" <<
+         "\nTime Build Spanning Tree DFS Adj Graph Directed: " << durationAdjDirectedBuildSpanningTreeDFS << " nanoseconds\n" <<
+         "\nTime Kruskal Adj Graph Directed: " << durationAdjDirectedKruskal << " nanoseconds\n";
+
+
+
+    cout << "\n\n\n\n---------------------------------------------------" << endl;
+    cout << "\nTime All Adj Graph Undirected: " << durationAdjUndirected << " milliseconds\n" <<
+         "\nTime Creating Adj Graph Undirected: " << durationAdjUndirectedCreating << " nanoseconds\n" <<
+         "\nTime Printing Adj Graph Undirected: " << durationAdjUndirectedPrinting << " nanoseconds\n" <<
+         "\nTime Adj Directed Connection Undirected:" << durationAdjUndirectedConnection << " nanoseconds\n" <<
+         "\nTime Dfs Increasing Edge Weights Adj Graph Undirected: " << durationAdjUndirectedDfsIncreasingEdgeWeights << " nanoseconds\n" <<
+         "\nTime Find Connected Components Adj Graph Undirected: " << durationAdjUndirectedFindConnectedComponents << " nanoseconds\n" <<
+         "\nTime Dijkstra Adj Graph Undirected: " << durationAdjUndirectedDijkstra << " nanoseconds\n" <<
+         "\nTime Topological Sort Adj Graph Undirected: " << durationAdjUndirectedTopologicalSort << " nanoseconds\n" <<
+         "\nTime Build Spanning Tree DFS Adj Graph Undirected: " << durationAdjUndirectedBuildSpanningTreeDFS << " nanoseconds\n" <<
+         "\nTime Kruskal Adj Graph Undirected: " << durationAdjUndirectedKruskal << " nanoseconds\n";
+
+
+    cout << "\n\n    BENCHMARK IS ENDED UP WITH THE ABOVE-MENTIONED RESULTS    \n";
 }
